@@ -16,6 +16,7 @@ export const mapState = writable({
     },
     toolPaintCountySettings: {
         color: "#ff0000",
-        counties: []
+        paintedCounties: {}
     },
 });
+

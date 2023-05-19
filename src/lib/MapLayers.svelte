@@ -39,7 +39,6 @@
         });
     }
 
-
     // Reactive statement to redraw the map when necessary
     $: redrawMap();
     async function redrawMap() {
@@ -47,21 +46,21 @@
         await drawLayer($mapState.choroSettings.selectedLayerTitle);
     }
 
+    // Clear all map layers
+        function clearLayers() {
+            if (map) {
+                map.removeLayer("choro-data-layer");
+            }
+        }
+
     // Handle dropdown change event
-    function handleDropdownChange(event) {
+    async function handleDropdownChange(event) {
         mapState.update(state => {
             state.choroSettings.selectedLayerTitle = event.target.value;
             return state;
         });
         clearLayers();
-        drawLayer($mapState.choroSettings.selectedLayerTitle);
-    }
-
-    // Clear all map layers
-    function clearLayers() {
-        if (map) {
-            map.removeLayer("choro-data-layer");
-        }
+        await drawLayer($mapState.choroSettings.selectedLayerTitle);
     }
 
     function generateColors(numColors) {
@@ -94,7 +93,6 @@
                             colorStops.push(pop, colors[i]);
                         }
                         return colorStops;
-                        resolve();
                     })
                     .then(colorStops => {
                             map.addLayer({
@@ -117,13 +115,25 @@
                                 legend.innerHTML +=
                                     `<i style="background:${color};width:10px;height:10px;display:inline-block;"></i> ${pop.toFixed(2)}<br>`;
                             }
+
+                            // Draw the painted counties from the store after adding the layer and the legend
+                            let paintExpression = ['match', ['get', 'GEO_ID']];
+
+                            for (const [geoId, color] of Object.entries($mapState.toolPaintCountySettings.paintedCounties)) {
+                                paintExpression.push(geoId, color);
+                            }
+
+                            // If no match, fall back to original choropleth color scheme
+                            paintExpression.push(['interpolate', ['linear'], ['get', $mapState.choroSettings.selectedLayerTitle], ...colorStops]);
+
+                            map.setPaintProperty('choro-data-layer', 'fill-color', paintExpression);
+
+                            resolve();
                     });
                 console.log(`Drawing layer: ${layerTitle}`);
             }
         });
     }
-
-
 
     onMount(() => {
         // Make a GET request to fetch the dataset information

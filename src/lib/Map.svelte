@@ -10,12 +10,27 @@
 
     let MapboxCircle;
 
+    let mapDiv;
+    
+    function drawPaintedCounties(map, mapState, layerName = 'choro-data-layer') {
+        // create a new expression that matches the feature id to assign the new color
+        var paintExpression = ["match", ["get", "GEO_ID"]];
+
+        // Loop over all painted counties and add them to the paintExpression
+        for (const [geoId, color] of Object.entries(mapState.toolPaintCountySettings.paintedCounties)) {
+            paintExpression.push(geoId, color);
+        }
+
+        // fallback value, if id doesn't match (preserves the existing colors)
+        paintExpression.push(map.getPaintProperty(layerName, 'fill-color'));
+
+        map.setPaintProperty(layerName, 'fill-color', paintExpression);
+    }
+
     onMount(async () => {
         const module = await import('mapbox-gl-circle');
         MapboxCircle = module.default;
     });
-
-    let mapDiv;
 
     onMount(() => {
         mapboxgl.accessToken = 'pk.eyJ1IjoiZXRoYW56YXdhZHprZSIsImEiOiJjbDdvNDllbHUyODI2M3VvM29ieWkwMWpjIn0.64VWitRTyHE-LheRQ3gCyg';
@@ -85,14 +100,27 @@
                     }
                     var feature = features[0];
 
-                    // create a new expression that matches the feature id to assign the new color
+                    mapState.update(state => {
+                        let updatedPaintedCounties = {...state.toolPaintCountySettings.paintedCounties};
+                        updatedPaintedCounties[feature.properties.GEO_ID] = $mapState.toolPaintCountySettings.color;
+                        state.toolPaintCountySettings.paintedCounties = updatedPaintedCounties;
+                        return state;
+                    });
+
+                    //log all keys in paintedCounties
+                    console.log(Object.keys($mapState.toolPaintCountySettings.paintedCounties));
+                    console.log($mapState.toolPaintCountySettings.paintedCounties);
+
+
+                    /*  // create a new expression that matches the feature id to assign the new color
                     var paintExpression = ["match", ["get", "GEO_ID"]];
                     paintExpression.push(feature.properties.GEO_ID);
                     paintExpression.push($mapState.toolPaintCountySettings.color);
                     // fallback value, if id doesn't match (preserves the existing colors)
                     paintExpression.push(map.getPaintProperty('choro-data-layer', 'fill-color'));
 
-                    map.setPaintProperty('choro-data-layer', 'fill-color', paintExpression);
+                    map.setPaintProperty('choro-data-layer', 'fill-color', paintExpression); */
+                    drawPaintedCounties(map, $mapState); 
                 }
             });
 
