@@ -54,7 +54,11 @@
             addSourcesToMap(map, sources);
         })
 
-        // Add your onclick listeners
+        let popup = new mapboxgl.Popup({
+            closeButton: true,
+            closeOnClick: true
+        });
+
         map.on('click', function(e) {
             if ($mapState.toolMode === "Circle") {
                 const circle = new MapboxCircle(e.lngLat, $mapState.toolCircleSettings.radius, {
@@ -66,6 +70,14 @@
                         id: Date.now(),
                         circle: circle
                     };
+
+                    circleObject.circle.on('contextmenu', function(e) {
+                        circleObject.circle.remove();
+                        mapState.update(state => {
+                            delete state.toolCircleSettings.circles[circleObject.id];
+                            return state;
+                        });
+                    });
 
                     mapState.update(state => {
                         state.toolCircleSettings.circles[circleObject.id] = circleObject;
@@ -86,22 +98,36 @@
                     console.log(state.toolPaintCountySettings.paintedCounties)
                     return state;
                 });
-            } else {
-                map.on('click', 'choro-data-layer', function(e) {
-                    let properties = e.features[0].properties;
+            } else if ($mapState.toolMode === "Erase") {
+                const features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+                if (features.length) {
+                    const { GEO_ID } = features[0].properties;  
+                    mapState.update(state => {
+                        delete state.toolPaintCountySettings.paintedCounties[GEO_ID];
+                        console.log(state.toolPaintCountySettings.paintedCounties);
+                        return state;
+                    });
+                }
+            }   else {
+                // Your logic for handling popup goes here
+                let features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
 
-                    let description = '';
-                    for (let property in properties) {
-                        if (typeof properties[property] === 'number') {
-                            description += `<strong>${property}:</strong> ${properties[property]}<br>`;
-                        }
+                if (!features.length) {
+                    return;
+                }
+
+                let properties = features[0].properties;
+                let description = '';
+                for (let property in properties) {
+                    if (typeof properties[property] === 'number') {
+                        description += `<strong>${property}:</strong> ${properties[property]}<br>`;
                     }
+                }
 
-                    new mapboxgl.Popup()
-                        .setLngLat(e.lngLat)
-                        .setHTML(description)
-                        .addTo(map);
-                });
+                // Update the content and position of the existing popup instance
+                popup.setLngLat(e.lngLat)
+                    .setHTML(description)
+                    .addTo(map);
             }
         });
 
@@ -120,19 +146,21 @@
         };
     })
 
-    function drawPaintedCounties(map, mapState, layerName = 'choro-data-layer') {
-        // create a new expression that matches the feature id to assign the new color
-        var paintExpression = ["match", ["get", "GEO_ID"]];
-
-        // Loop over all painted counties and add them to the paintExpression
-        for (const [geoId, color] of Object.entries(mapState.toolPaintCountySettings.paintedCounties)) {
-            paintExpression.push(geoId, color);
+    function drawPaintedCounties(map, mapState, layerName = 'choro-data-layer') {  
+        var paintExpression;  
+        
+        if (Object.keys(mapState.toolPaintCountySettings.paintedCounties).length) {
+            if (mapState.toolMode !== "Erase") {
+            paintExpression = ["match", ["get", "GEO_ID"]];
+            for (const [geoId, color] of Object.entries(mapState.toolPaintCountySettings.paintedCounties)) {
+                paintExpression.push(geoId, color);   
+            }    
+            }   
+        } else {
+            paintExpression = map.getPaintProperty(layerName, 'fill-color');
         }
 
-        // fallback value, if id doesn't match (preserves the existing colors)
-        paintExpression.push(map.getPaintProperty(layerName, 'fill-color'));
-
-        map.setPaintProperty(layerName, 'fill-color', paintExpression);
+        map.setPaintProperty(layerName, 'fill-color', paintExpression);   
     }
 
     $: {

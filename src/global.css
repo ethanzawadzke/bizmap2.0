@@ -16,3 +16,11 @@ body {
     padding-left: 1rem;
     padding-right: 1rem;
 }
+
+
+.active {
+    color: white;
+    background-color: rgb(80, 80, 80);
+    border-radius: 3px;
+    /* other active styles */
+}

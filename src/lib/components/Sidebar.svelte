@@ -31,8 +31,6 @@
         bottom: 0;
         left: 0;
         background-color: white;
-        padding-top: 1rem;
-        padding-bottom: 1rem;
     }
 
     .legend {

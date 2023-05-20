@@ -3,14 +3,40 @@
     import { mapState } from "$lib/store.js";
 
     function selectCircleTool () {
-        mapState.update(value => ({ ...value, toolMode: "Circle" }));
+        if ($mapState.toolMode === "Circle") {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "None"
+            }));
+        } else {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "Circle" 
+            }));    
+        }
     }
 </script>
 
 <section class="sidebar-section">
-    <button on:click={selectCircleTool}>Circle Drawing Tool</button>
-    <input id="radius-input" type="number" bind:value={$mapState.toolCircleSettings.radius} placeholder="Enter radius..." />
-    <input id="color-picker" type="color" bind:value={$mapState.toolCircleSettings.color} />
+    <button 
+        class:active={$mapState.toolMode === "Circle"}   
+        checked={$mapState.toolMode === "Circle"} 
+        on:click={selectCircleTool}>
+        Circle Drawing Tool
+    </button>
+
+    <input
+        id="radius-input" 
+        type="number" 
+        bind:value={$mapState.toolCircleSettings.radius} 
+        placeholder="Enter radius..." 
+    />
+
+    <input 
+        id="color-picker" 
+        type="color" 
+        bind:value={$mapState.toolCircleSettings.color} 
+    />
 </section>
 
 <style>

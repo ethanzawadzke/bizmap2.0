@@ -83,15 +83,27 @@ export function drawLayer(layerTitle) {
                         const paintedCounties = state.toolPaintCountySettings.paintedCounties;
                         const selectedLayerTitle = state.choroSettings.selectedLayerTitle;
 
-                        for (const [geoId, color] of Object.entries(paintedCounties)) {
-                            paintExpression.push(geoId, color);
-                        }
+                        /* if (mapState.toolMode != "erase") {
+                            for (const [geoId, color] of Object.entries(paintedCounties)) {
+                                paintExpression.push(geoId, color);
+                            }
+                        } */
 
+                        //if mapState.toolPaintCountySettings.paintedCounties is not empty
+                        if (Object.keys(paintedCounties).length > 0) {
+                            for (const [geoId, color] of Object.entries(paintedCounties)) {
+                                paintExpression.push(geoId, color);
+                            }
+                        } else {
+                            paintExpression.push('000', '#ffffff');
+                        }
+                        
                         // If no match, fall back to original choropleth color scheme
                         paintExpression.push(['interpolate', ['linear'], ['get', selectedLayerTitle], ...colorStops]);
 
                         map.setPaintProperty('choro-data-layer', 'fill-color', paintExpression);
 
+                        // Update legend
                         let legend = document.getElementById('legend');
                         legend.innerHTML = `<h4>${layerTitle}</h4>`;
                         for (let i = 0; i < colorStops.length; i += 2) {
