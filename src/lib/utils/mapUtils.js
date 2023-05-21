@@ -2,6 +2,7 @@ import { mapState } from "$lib/store.js";
 import { accessToken, datasetId } from "./mapboxConfig.js";
 import chroma from "chroma-js";
 import { sources } from "./sources.js";
+import mapboxgl from "mapbox-gl";
 
 let map;
 
@@ -155,6 +156,50 @@ export function handleServiceLine () {
     unsubscribe();
 }
 
+export function createPopup(map, popup, e) {
+    let features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+
+    if (!features.length) {
+        return;
+    }
+
+    let properties = features[0].properties;
+    let description = '';
+    let header = `<h2>${features[0].properties.NAME}</h2>`
+    for (let property in properties) {
+        description += `<strong>${property}:</strong> ${properties[property]}<br>`;
+    }
+
+    // Update the content and position of the existing popup instance
+    popup.setLngLat(e.lngLat)
+        .setHTML(header + description)
+        .addTo(map);
+}
+
+let currentPopup = null;
+
 export const zoomToFeature = (coordinates) => {
+    if (currentPopup) {
+        currentPopup.remove();
+        currentPopup = null;
+    }
+
+    const popup = new mapboxgl.Popup({ offset: 25 });
+
+    // Fly to the new coordinates first
     map.flyTo({ center: coordinates, zoom: 10 });  // adjust zoom level as needed
+
+    // Wait for the 'moveend' event before creating the popup
+    map.once('moveend', () => {
+        const e = {
+            lngLat: {
+                lng: coordinates[0],
+                lat: coordinates[1]
+            },
+            point: map.project(new mapboxgl.LngLat(coordinates[0], coordinates[1]))
+        };
+        createPopup(map, popup, e);
+        currentPopup = popup;
+    });
 };
+

@@ -1,7 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { mapState } from '$lib/store.js';
-    import { zoomToFeature } from '$lib/utils/mapUtils.js';
+    import { zoomToFeature, createPopup } from '$lib/utils/mapUtils.js';
 
     let data = [];
     let sortKey = 'county';  // default sort key
@@ -80,6 +80,8 @@
 
     // re-fetch data whenever $mapState.choroSettings.selectedLayerTitle changes
     $: fetchData(), $mapState.choroSettings.selectedLayerTitle;
+
+    let map = $mapState.map;
 </script>
 
 <section class="sidebar-section">

@@ -4,7 +4,7 @@
     import "mapbox-gl/dist/mapbox-gl.css";
     import { mapState } from "$lib/store.js";
     import { accessToken, datasetId } from "$lib/utils/mapboxConfig.js";
-    import { clearLayers, drawLayer, handleServiceLine } from "$lib/utils/mapUtils.js";
+    import { clearLayers, drawLayer, handleServiceLine, createPopup } from "$lib/utils/mapUtils.js";
     import { sources } from "$lib/utils/sources.js";
 
     let map;
@@ -109,25 +109,7 @@
                     });
                 }
             }   else {
-                // Your logic for handling popup goes here
-                let features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
-
-                if (!features.length) {
-                    return;
-                }
-
-                let properties = features[0].properties;
-                let description = '';
-                for (let property in properties) {
-                    if (typeof properties[property] === 'number') {
-                        description += `<strong>${property}:</strong> ${properties[property]}<br>`;
-                    }
-                }
-
-                // Update the content and position of the existing popup instance
-                popup.setLngLat(e.lngLat)
-                    .setHTML(description)
-                    .addTo(map);
+                createPopup(map, popup, e);
             }
         });
 
@@ -186,3 +168,10 @@
 </script>
 
 <div bind:this={mapContainer} id="map" style="width: 100%; height: 100vh;"></div>
+
+<style>
+    h2 {
+        margin: 0;
+        padding: 0;
+    }
+</style>
