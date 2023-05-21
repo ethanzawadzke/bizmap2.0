@@ -6,32 +6,31 @@
 
     const url = `https://api.mapbox.com/datasets/v1/ethanzawadzke/${datasetId}/features?limit=50&access_token=${accessToken}`;
 
-    onMount(() => {
-        // Make a GET request to fetch the dataset information
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const properties = data.features[0].properties;
-                const propertyNames = Object.keys(properties);
-                const numericProperties = propertyNames.filter(name => {
-                    return typeof properties[name] === 'number';
-                });
-
-                // Update the layerTitles value in the store
-                mapState.update(state => {
-                    return { 
-                        ...state, 
-                        choroSettings: { 
-                            ...state.choroSettings, 
-                            layerTitles: ["None"].concat(numericProperties) 
-                        }
-                    };
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching dataset information:', error);
+    onMount(async () => {
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const properties = data.features[0].properties;
+            const propertyNames = Object.keys(properties);
+            const numericProperties = propertyNames.filter(name => {
+                return typeof properties[name] === 'number';
             });
+
+            // Update the layerTitles value in the store
+            mapState.update(state => {
+                return { 
+                    ...state, 
+                    choroSettings: { 
+                        ...state.choroSettings, 
+                        layerTitles: ["None"].concat(numericProperties) 
+                    }
+                };
+            });
+        } catch (error) {
+            console.error('Error fetching dataset information:', error);
+        }
     });
+
 
     function toggleHandleLayerChange() {
         console.log("Toggling handleLayerChange");

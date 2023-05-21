@@ -7,8 +7,10 @@
     let sortKey = 'county';  // default sort key
     let sortAsc = true;  // default sort order
     let sortedData = [];  // array to hold the sorted data
+    let isLoading = false;
 
     const fetchData = async () => {
+        isLoading = true;
         let allFeatures = [];
         let nextStartId = null;
 
@@ -57,6 +59,7 @@
                 // and so on for the other fields...
             };
         });
+        isLoading = false;
     };
 
     const sortData = (key) => {
@@ -85,6 +88,10 @@
 </script>
 
 <section class="sidebar-section">
+  {#if isLoading} <!-- display loading animation if data is being fetched -->
+    <!-- insert your loading animation here -->
+    <div>Loading... (may take a while)</div>
+  {:else}
   <table>
       <thead>
           <tr>
@@ -105,6 +112,7 @@
           {/each}
       </tbody>
   </table>
+  {/if}
 </section>
 
 <style>

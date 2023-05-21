@@ -187,7 +187,7 @@ export const zoomToFeature = (coordinates) => {
     const popup = new mapboxgl.Popup({ offset: 25 });
 
     // Fly to the new coordinates first
-    map.flyTo({ center: coordinates, zoom: 10 });  // adjust zoom level as needed
+    map.flyTo({ center: coordinates, zoom: 7 });  // adjust zoom level as needed
 
     // Wait for the 'moveend' event before creating the popup
     map.once('moveend', () => {
