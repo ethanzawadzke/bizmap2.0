@@ -109,6 +109,7 @@
                     });
                 }
             }   else {
+                // Create popup on click
                 createPopup(map, popup, e);
             }
         });

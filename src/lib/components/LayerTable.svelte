@@ -88,10 +88,7 @@
 </script>
 
 <section class="sidebar-section">
-  {#if isLoading} <!-- display loading animation if data is being fetched -->
-    <!-- insert your loading animation here -->
-    <div>Loading... (may take a while)</div>
-  {:else}
+  
   <table>
       <thead>
           <tr>
@@ -112,7 +109,7 @@
           {/each}
       </tbody>
   </table>
-  {/if}
+ 
 </section>
 
 <style>
