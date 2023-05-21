@@ -9,54 +9,46 @@
     let sortedData = [];  // array to hold the sorted data
 
     const fetchData = async () => {
-        let allFeatures = [];
-        let nextStartId = null;
+        // fetch data from Mapbox API
+        const response = await fetch("https://api.mapbox.com/datasets/v1/ethanzawadzke/clhtts6vu32zj2pobovnqn7tk/features?access_token=pk.eyJ1IjoiZXRoYW56YXdhZHprZSIsImEiOiJjbDdvNDllbHUyODI2M3VvM29ieWkwMWpjIn0.64VWitRTyHE-LheRQ3gCyg");
+        const json = await response.json();
 
-        do {
-            let apiUrl = `https://api.mapbox.com/datasets/v1/ethanzawadzke/clhtts6vu32zj2pobovnqn7tk/features?limit=506&access_token=pk.eyJ1IjoiZXRoYW56YXdhZHprZSIsImEiOiJjbDdvNDllbHUyODI2M3VvM29ieWkwMWpjIn0.64VWitRTyHE-LheRQ3gCyg`;
+        console.log("JSON fetched from Mapbox API:");
+        console.log(json);
 
-            if (nextStartId) {
-                apiUrl += `&start=${nextStartId}`;
-            }
+        data = json.features.map(feature => {
+        let coordinates;
+        switch (feature.geometry.type) {
+            case 'Point':
+                coordinates = feature.geometry.coordinates;
+                break;
+            case 'Polygon':
+                const polygonCoordinates = feature.geometry.coordinates[0];
+                const sumLng = polygonCoordinates.reduce((acc, coord) => acc + coord[0], 0);
+                const sumLat = polygonCoordinates.reduce((acc, coord) => acc + coord[1], 0);
+                const centerLng = sumLng / polygonCoordinates.length;
+                const centerLat = sumLat / polygonCoordinates.length;
+                coordinates = [centerLng, centerLat];
+                break;
+            // Handle other geometry types if needed
+            default:
+                coordinates = null;
+        }
 
-            const response = await fetch(apiUrl);
-            const json = await response.json();
+        return {
+            id: feature.id,
+            county: feature.properties.NAME,
+            state: feature.properties.STATE,
+            datapoint: feature.properties[$mapState.choroSettings.selectedLayerTitle],
+            coordinates: coordinates
+            // and so on for the other fields...
+        };
+    });
 
-            allFeatures = [...allFeatures, ...json.features];
 
-            const lastFeature = json.features[json.features.length - 1];
-            nextStartId = lastFeature ? lastFeature.id : null;
-        } while (nextStartId);
 
-        // Process the data as you did before, replacing json.features with allFeatures
-        data = allFeatures.map(feature => {
-            let coordinates;
-            switch (feature.geometry.type) {
-                case 'Point':
-                    coordinates = feature.geometry.coordinates;
-                    break;
-                case 'Polygon':
-                    const polygonCoordinates = feature.geometry.coordinates[0];
-                    const sumLng = polygonCoordinates.reduce((acc, coord) => acc + coord[0], 0);
-                    const sumLat = polygonCoordinates.reduce((acc, coord) => acc + coord[1], 0);
-                    const centerLng = sumLng / polygonCoordinates.length;
-                    const centerLat = sumLat / polygonCoordinates.length;
-                    coordinates = [centerLng, centerLat];
-                    break;
-                // Handle other geometry types if needed
-                default:
-                    coordinates = null;
-            }
-
-            return {
-                id: feature.id,
-                county: feature.properties.NAME,
-                state: feature.properties.STATE,
-                datapoint: feature.properties[$mapState.choroSettings.selectedLayerTitle],
-                coordinates: coordinates
-                // and so on for the other fields...
-            };
-        });
+        /* console.log("Data fetched from Mapbox API:");
+        console.log(data); */
     };
 
     const sortData = (key) => {
