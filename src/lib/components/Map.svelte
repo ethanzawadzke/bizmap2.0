@@ -4,7 +4,7 @@
     import "mapbox-gl/dist/mapbox-gl.css";
     import { mapState } from "$lib/store.js";
     import { accessToken, datasetId } from "$lib/utils/mapboxConfig.js";
-    import { clearLayers, drawLayer, handleServiceLine, createPopup } from "$lib/utils/mapUtils.js";
+    import { clearLayers, drawLayer, handleServiceLine, createPopup, convertMilesToMeters } from "$lib/utils/mapUtils.js";
     import { sources } from "$lib/utils/sources.js";
 
     let map;
@@ -39,6 +39,27 @@
                 url: 'mapbox://ethanzawadzke.clhtts6vu32zj2pobovnqn7tk-91mdg'
             });
 
+            map.addSource('Psychiatric Hospitals', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/ethanzawadzke/supreme-octo-engine/8a7cd9525aaa2a7b360e4b43c4f1c38dd12d379b/Texas%20Data%20Sets%20for%20MAP%20%20-%20Copy%20of%20Psych%20Hospitals.geojson',
+                'cluster': true, // Enable clustering
+                'clusterMaxZoom': 8,
+                'clusterRadius': 35 // Radius of each cluster when clustering points (defaults to 50)
+            });
+
+            map.addSource('SUD RTCs and Outpatient', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/ethanzawadzke/supreme-octo-engine/main/Texas%20Data%20Sets%20for%20MAP%20%20-%20Copy%20of%20SUD%20RTC%20and%20Outpatient.geojson',
+                'cluster': true, // Enable clustering
+                'clusterMaxZoom': 8,
+                'clusterRadius': 50 // Radius of each cluster when clustering points (defaults to 50)
+            });
+
+            map.addSource('SUD RTCs and Outpatient Heatmap', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/ethanzawadzke/supreme-octo-engine/main/Texas%20Data%20Sets%20for%20MAP%20%20-%20Copy%20of%20SUD%20RTC%20and%20Outpatient.geojson',
+            });
+
             map.addLayer({
                 'id': 'test-layer-outline',
                 'type': 'line',
@@ -61,7 +82,7 @@
 
         map.on('click', function(e) {
             if ($mapState.toolMode === "Circle") {
-                const circle = new MapboxCircle(e.lngLat, $mapState.toolCircleSettings.radius, {
+                const circle = new MapboxCircle(e.lngLat, convertMilesToMeters($mapState.toolCircleSettings.radius), {
                         editable: true,
                         fillColor: $mapState.toolCircleSettings.color
                     }).addTo(map, null);
@@ -77,6 +98,10 @@
                             delete state.toolCircleSettings.circles[circleObject.id];
                             return state;
                         });
+                    });
+
+                    circle.once('radiuschanged', function (circleObj) {
+                        console.log('New radius (once!):', circleObj.getRadius());
                     });
 
                     mapState.update(state => {
@@ -162,6 +187,11 @@
         else if ($mapState.handleServiceLineChange) {
             console.log("Handling checkbox change");
             handleServiceLine();
+            mapState.update(state => ({ ...state, handleServiceLineChange: false }));
+        }
+        else if ($mapState.handleTexasFacilityChange) {
+            console.log("Handling checkbox change");
+            handleTexasFacility();
             mapState.update(state => ({ ...state, handleServiceLineChange: false }));
         }
     }

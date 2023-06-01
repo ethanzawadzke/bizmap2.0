@@ -1,0 +1,1080 @@
+ChoroOptions.svelte
+<script>
+    import { onMount } from "svelte";
+    import { mapState } from "$lib/store.js";
+
+    function handleColorChange() {
+        mapState.update(state => {
+            return { ...state, handleColorChange: true };
+        });
+    }
+</script>
+
+<section class="sidebar-section">
+    <label for="color-steps-input">Color Steps:</label>
+    <input id="color-steps-input" type="number" bind:value={$mapState.choroSettings.colorSteps}/>
+
+    <label for="start-color-input">Color 1:</label>
+    <input id="start-color-input" type="color" bind:value={$mapState.choroSettings.startColor} on:change={handleColorChange}/>
+
+    <label for="end-color-input">Color 2:</label>
+    <input id="end-color-input" type="color" bind:value={$mapState.choroSettings.endColor} on:change={handleColorChange}/>
+</section>
+
+<style>
+    .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+</style>
+CircleTool.svelte
+<script>
+    import { onMount } from "svelte";
+    import { mapState } from "$lib/store.js";
+
+    function selectCircleTool () {
+        if ($mapState.toolMode === "Circle") {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "None"
+            }));
+        } else {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "Circle" 
+            }));    
+        }
+    }
+</script>
+
+<section class="sidebar-section">
+    <button 
+        class:active={$mapState.toolMode === "Circle"}   
+        checked={$mapState.toolMode === "Circle"} 
+        on:click={selectCircleTool}>
+        Circle Drawing Tool
+    </button>
+
+    <input
+        id="radius-input" 
+        type="number" 
+        bind:value={$mapState.toolCircleSettings.radius} 
+        placeholder="Enter radius..." 
+    />
+
+    <input 
+        id="color-picker" 
+        type="color" 
+        bind:value={$mapState.toolCircleSettings.color} 
+    />
+</section>
+
+<style>
+    .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+</style>
+LayerSelect.svelte
+<script>
+    import { onMount } from "svelte";
+    import { mapState } from "$lib/store.js";
+    import { accessToken, datasetId } from "$lib/utils/mapboxConfig.js";
+    import chroma from "chroma-js";
+
+    const url = `https://api.mapbox.com/datasets/v1/ethanzawadzke/${datasetId}/features?limit=50&access_token=${accessToken}`;
+
+    onMount(async () => {
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const properties = data.features[0].properties;
+            const propertyNames = Object.keys(properties);
+            const numericProperties = propertyNames.filter(name => {
+                return typeof properties[name] === 'number';
+            });
+
+            // Update the layerTitles value in the store
+            mapState.update(state => {
+                return { 
+                    ...state, 
+                    choroSettings: { 
+                        ...state.choroSettings, 
+                        layerTitles: ["None"].concat(numericProperties) 
+                    }
+                };
+            });
+        } catch (error) {
+            console.error('Error fetching dataset information:', error);
+        }
+    });
+
+
+    function toggleHandleLayerChange() {
+        console.log("Toggling handleLayerChange");
+        mapState.update(state => {
+            if (!state.handleLayerChange) {
+                return { 
+                    ...state, 
+                    handleLayerChange: true 
+                };
+            }
+            return state; // if handleLayerChange is already true, return the state as is
+        });
+    }
+</script>
+
+<section class="sidebar-section">
+    <select class="layer-select" bind:value={$mapState.choroSettings.selectedLayerTitle} on:change={toggleHandleLayerChange}>
+        {#each $mapState.choroSettings.layerTitles as layerTitle}
+            <option value={layerTitle}>{layerTitle}</option>
+        {/each}
+    </select>
+</section>
+
+<style>
+    .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+</style>
+LayerTable.svelte
+<script>
+    import { onMount } from 'svelte';
+    import { mapState } from '$lib/store.js';
+    import { zoomToFeature, createPopup } from '$lib/utils/mapUtils.js';
+
+    let data = [];
+    let sortKey = 'county';  // default sort key
+    let sortAsc = true;  // default sort order
+    let sortedData = [];  // array to hold the sorted data
+    let isLoading = false;
+
+    const fetchData = async () => {
+        isLoading = true;
+        let allFeatures = [];
+        let nextStartId = null;
+
+        do {
+            let apiUrl = `https://api.mapbox.com/datasets/v1/ethanzawadzke/clhtts6vu32zj2pobovnqn7tk/features?limit=506&access_token=pk.eyJ1IjoiZXRoYW56YXdhZHprZSIsImEiOiJjbDdvNDllbHUyODI2M3VvM29ieWkwMWpjIn0.64VWitRTyHE-LheRQ3gCyg`;
+
+            if (nextStartId) {
+                apiUrl += `&start=${nextStartId}`;
+            }
+
+            const response = await fetch(apiUrl);
+            const json = await response.json();
+
+            allFeatures = [...allFeatures, ...json.features];
+
+            const lastFeature = json.features[json.features.length - 1];
+            nextStartId = lastFeature ? lastFeature.id : null;
+        } while (nextStartId);
+
+        // Process the data as you did before, replacing json.features with allFeatures
+        data = allFeatures.map(feature => {
+            let coordinates;
+            switch (feature.geometry.type) {
+                case 'Point':
+                    coordinates = feature.geometry.coordinates;
+                    break;
+                case 'Polygon':
+                    const polygonCoordinates = feature.geometry.coordinates[0];
+                    const sumLng = polygonCoordinates.reduce((acc, coord) => acc + coord[0], 0);
+                    const sumLat = polygonCoordinates.reduce((acc, coord) => acc + coord[1], 0);
+                    const centerLng = sumLng / polygonCoordinates.length;
+                    const centerLat = sumLat / polygonCoordinates.length;
+                    coordinates = [centerLng, centerLat];
+                    break;
+                // Handle other geometry types if needed
+                default:
+                    coordinates = null;
+            }
+
+            return {
+                id: feature.id,
+                county: feature.properties.NAME,
+                state: feature.properties.STATE,
+                datapoint: feature.properties[$mapState.choroSettings.selectedLayerTitle],
+                coordinates: coordinates
+                // and so on for the other fields...
+            };
+        });
+        isLoading = false;
+    };
+
+    const sortData = (key) => {
+        console.log("Sorting data by: " + key);
+        if (sortKey === key) {
+            sortAsc = !sortAsc;
+        } else {
+            sortKey = key;
+            sortAsc = true;
+        }
+    };
+
+    // Sort data whenever data, sortKey, or sortAsc changes
+    $: sortedData = [...data].sort((a, b) => {
+            if (a[sortKey] < b[sortKey]) return sortAsc ? -1 : 1;
+            if (a[sortKey] > b[sortKey]) return sortAsc ? 1 : -1;
+            return 0;
+        });
+
+    onMount(fetchData);  // fetch data initially
+
+    // re-fetch data whenever $mapState.choroSettings.selectedLayerTitle changes
+    $: fetchData(), $mapState.choroSettings.selectedLayerTitle;
+
+    let map = $mapState.map;
+</script>
+
+<section class="sidebar-section">
+  
+  <table>
+      <thead>
+          <tr>
+              <th><button on:click={() => sortData('county')}>County</button></th>
+              <th><button on:click={() => sortData('state')}>State</button></th>
+              <th><button on:click={() => sortData('datapoint')}>Datapoint</button></th>
+              <!-- and so on... -->
+          </tr>
+      </thead>
+      <tbody>
+          {#each sortedData as row (row.id)}
+              <tr on:click={() => zoomToFeature(row.coordinates)}>
+                  <td>{row.county}</td>
+                  <td>{row.state}</td>
+                  <td>{row.datapoint}</td>
+                  <!-- and so on... -->
+              </tr>
+          {/each}
+      </tbody>
+  </table>
+ 
+</section>
+
+<style>
+  .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        height: 100%;
+        overflow-y: scroll;
+    }
+
+    table {
+      height: 100%;
+    }
+</style>
+LayerTableOld.svelte
+<script>
+    import { onMount } from 'svelte';
+    import { mapState } from '$lib/store.js';
+    import { zoomToFeature } from '$lib/utils/mapUtils.js';
+
+    let data = [];
+    let sortKey = 'county';  // default sort key
+    let sortAsc = true;  // default sort order
+    let sortedData = [];  // array to hold the sorted data
+
+    const fetchData = async () => {
+        // fetch data from Mapbox API
+        const response = await fetch("https://api.mapbox.com/datasets/v1/ethanzawadzke/clhtts6vu32zj2pobovnqn7tk/features?access_token=pk.eyJ1IjoiZXRoYW56YXdhZHprZSIsImEiOiJjbDdvNDllbHUyODI2M3VvM29ieWkwMWpjIn0.64VWitRTyHE-LheRQ3gCyg");
+        const json = await response.json();
+
+        console.log("JSON fetched from Mapbox API:");
+        console.log(json);
+
+        data = json.features.map(feature => {
+        let coordinates;
+        switch (feature.geometry.type) {
+            case 'Point':
+                coordinates = feature.geometry.coordinates;
+                break;
+            case 'Polygon':
+                const polygonCoordinates = feature.geometry.coordinates[0];
+                const sumLng = polygonCoordinates.reduce((acc, coord) => acc + coord[0], 0);
+                const sumLat = polygonCoordinates.reduce((acc, coord) => acc + coord[1], 0);
+                const centerLng = sumLng / polygonCoordinates.length;
+                const centerLat = sumLat / polygonCoordinates.length;
+                coordinates = [centerLng, centerLat];
+                break;
+            // Handle other geometry types if needed
+            default:
+                coordinates = null;
+        }
+
+        return {
+            id: feature.id,
+            county: feature.properties.NAME,
+            state: feature.properties.STATE,
+            datapoint: feature.properties[$mapState.choroSettings.selectedLayerTitle],
+            coordinates: coordinates
+            // and so on for the other fields...
+        };
+    });
+
+
+
+        /* console.log("Data fetched from Mapbox API:");
+        console.log(data); */
+    };
+
+    const sortData = (key) => {
+        console.log("Sorting data by: " + key);
+        if (sortKey === key) {
+            sortAsc = !sortAsc;
+        } else {
+            sortKey = key;
+            sortAsc = true;
+        }
+    };
+
+    // Sort data whenever data, sortKey, or sortAsc changes
+    $: sortedData = [...data].sort((a, b) => {
+            if (a[sortKey] < b[sortKey]) return sortAsc ? -1 : 1;
+            if (a[sortKey] > b[sortKey]) return sortAsc ? 1 : -1;
+            return 0;
+        });
+
+    onMount(fetchData);  // fetch data initially
+
+    // re-fetch data whenever $mapState.choroSettings.selectedLayerTitle changes
+    $: fetchData(), $mapState.choroSettings.selectedLayerTitle;
+</script>
+
+<section class="sidebar-section">
+  <table>
+      <thead>
+          <tr>
+              <th><button on:click={() => sortData('county')}>County</button></th>
+              <th><button on:click={() => sortData('state')}>State</button></th>
+              <th><button on:click={() => sortData('datapoint')}>Datapoint</button></th>
+              <!-- and so on... -->
+          </tr>
+      </thead>
+      <tbody>
+          {#each sortedData as row (row.id)}
+              <tr on:click={() => zoomToFeature(row.coordinates)}>
+                  <td>{row.county}</td>
+                  <td>{row.state}</td>
+                  <td>{row.datapoint}</td>
+                  <!-- and so on... -->
+              </tr>
+          {/each}
+      </tbody>
+  </table>
+</section>
+
+<style>
+  .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+        height: 100%;
+        overflow-y: scroll;
+    }
+
+    table {
+      height: 100%;
+    }
+</style>
+Map.svelte
+<script>
+    import { onMount } from "svelte";
+    import mapboxgl from "mapbox-gl";
+    import "mapbox-gl/dist/mapbox-gl.css";
+    import { mapState } from "$lib/store.js";
+    import { accessToken, datasetId } from "$lib/utils/mapboxConfig.js";
+    import { clearLayers, drawLayer, handleServiceLine, createPopup } from "$lib/utils/mapUtils.js";
+    import { sources } from "$lib/utils/sources.js";
+
+    let map;
+    let mapContainer;
+    let MapboxCircle;
+
+    function addSourcesToMap(map, sources) {
+        for (const [key, value] of Object.entries(sources)) {
+            map.addSource(key, {
+                type: 'vector',
+                url: `mapbox://${value.tilesetId}`
+            });
+        }
+    }
+
+    async function initMap() {
+        const module = await import('mapbox-gl-circle');
+        MapboxCircle = module.default;
+
+        mapboxgl.accessToken = accessToken;
+        
+        const map = new mapboxgl.Map({
+            container: mapContainer, 
+            style: 'mapbox://styles/mapbox/streets-v12', 
+            center: [-73.99283,40.750813], 
+            zoom: 5
+        });
+
+        map.on('load', function() {
+            map.addSource('counties-dataset', {
+                type: 'vector',
+                url: 'mapbox://ethanzawadzke.clhtts6vu32zj2pobovnqn7tk-91mdg'
+            });
+
+            map.addLayer({
+                'id': 'test-layer-outline',
+                'type': 'line',
+                'source': 'counties-dataset',
+                'source-layer': 'counties-dataset',
+                'paint': {
+                    'line-color': '#000000',
+                    'line-width': .5,
+                    'line-opacity': .5
+                }
+            });
+
+            addSourcesToMap(map, sources);
+        })
+
+        let popup = new mapboxgl.Popup({
+            closeButton: true,
+            closeOnClick: true
+        });
+
+        map.on('click', function(e) {
+            if ($mapState.toolMode === "Circle") {
+                const circle = new MapboxCircle(e.lngLat, $mapState.toolCircleSettings.radius, {
+                        editable: true,
+                        fillColor: $mapState.toolCircleSettings.color
+                    }).addTo(map, null);
+
+                    const circleObject = {
+                        id: Date.now(),
+                        circle: circle
+                    };
+
+                    circleObject.circle.on('contextmenu', function(e) {
+                        circleObject.circle.remove();
+                        mapState.update(state => {
+                            delete state.toolCircleSettings.circles[circleObject.id];
+                            return state;
+                        });
+                    });
+
+                    mapState.update(state => {
+                        state.toolCircleSettings.circles[circleObject.id] = circleObject;
+                        return state;
+                    });
+            } else if ($mapState.toolMode === "Paint") {
+                var features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+                console.log(features);
+                if (!features.length) {
+                    return;
+                }
+                var feature = features[0];
+
+                mapState.update(state => {
+                    let updatedPaintedCounties = {...state.toolPaintCountySettings.paintedCounties};
+                    updatedPaintedCounties[feature.properties.GEO_ID] = $mapState.toolPaintCountySettings.color;
+                    state.toolPaintCountySettings.paintedCounties = updatedPaintedCounties;
+                    console.log(state.toolPaintCountySettings.paintedCounties)
+                    return state;
+                });
+            } else if ($mapState.toolMode === "Erase") {
+                const features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+                if (features.length) {
+                    const { GEO_ID } = features[0].properties;  
+                    mapState.update(state => {
+                        delete state.toolPaintCountySettings.paintedCounties[GEO_ID];
+                        console.log(state.toolPaintCountySettings.paintedCounties);
+                        return state;
+                    });
+                }
+            }   else {
+                // Create popup on click
+                createPopup(map, popup, e);
+            }
+        });
+
+        await new Promise(resolve => map.on('load', resolve));
+
+        return map;
+    }
+    
+    onMount(async () => {
+        map = await initMap();
+        
+        mapState.update(state => ({ ...state, map }));
+        
+        return () => {
+            map.remove();
+        };
+    })
+
+    function drawPaintedCounties(map, mapState, layerName = 'choro-data-layer') {  
+        var paintExpression;  
+        
+        if (Object.keys(mapState.toolPaintCountySettings.paintedCounties).length) {
+            if (mapState.toolMode !== "Erase") {
+            paintExpression = ["match", ["get", "GEO_ID"]];
+            for (const [geoId, color] of Object.entries(mapState.toolPaintCountySettings.paintedCounties)) {
+                paintExpression.push(geoId, color);   
+            }    
+            }   
+        } else {
+            paintExpression = map.getPaintProperty(layerName, 'fill-color');
+        }
+
+        map.setPaintProperty(layerName, 'fill-color', paintExpression);   
+    }
+
+    $: {
+        if ($mapState.handleLayerChange) {
+            console.log("Handling layer change");
+            clearLayers();
+            drawLayer($mapState.choroSettings.selectedLayerTitle);
+            mapState.update(state => ({ ...state, handleLayerChange: false }));
+        }
+        else if ($mapState.handleCountyChange) {
+            console.log("Handling paint county change");
+            drawPaintedCounties(map, $mapState);
+            mapState.update(state => ({ ...state, handlePaintCountyChange: false }));
+        }
+        // handle checkbox changes
+        else if ($mapState.handleServiceLineChange) {
+            console.log("Handling checkbox change");
+            handleServiceLine();
+            mapState.update(state => ({ ...state, handleServiceLineChange: false }));
+        }
+    }
+
+</script>
+
+<div bind:this={mapContainer} id="map" style="width: 100%; height: 100vh;"></div>
+
+<style>
+    h2 {
+        margin: 0;
+        padding: 0;
+    }
+</style>
+PaintTool.svelte
+<script>
+    import { onMount } from "svelte";
+    import { mapState } from "$lib/store.js";
+
+    function selectPaintTool () {
+        if ($mapState.toolMode === "Paint") {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "None"
+            }));
+        } else {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "Paint" 
+            }));    
+        }
+    }
+
+    function erasePaint () {
+        if ($mapState.toolMode === "Erase") {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "None"
+            }));
+        } else {
+            mapState.update(value => ({ 
+            ...value, 
+            toolMode: "Erase" 
+            }));    
+        }
+    }
+</script>
+
+<section class="sidebar-section">
+    <button 
+        class:active={$mapState.toolMode === "Paint"}  
+        checked={$mapState.toolMode === "Paint"} 
+        on:click={selectPaintTool}>
+        Paint Tool
+    </button>
+    <button 
+        class:active={$mapState.toolMode === "Erase"}  
+        checked={$mapState.toolMode === "Erase"} 
+        on:click={erasePaint} >
+        Erase
+    </button>
+    <input 
+        id="paint-color-picker" 
+        type="color" 
+        bind:value={$mapState.toolPaintCountySettings.color} 
+        on:change={() => mapState.update(value => ({ ...value, toolPaintCountySettings: { ...value.toolPaintCountySettings, color: $mapState.toolPaintCountySettings.color }}))}
+    />
+</section>
+
+<style>
+    .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+</style>
+ServiceLineToggles.svelte
+<script>
+    import { onMount } from 'svelte';
+    import { mapState } from '$lib/store.js';
+
+    function toggleHandleServiceLineChange(event) {
+        const checkboxValue = event.target.value;
+        
+        console.log(`Toggling ${checkboxValue}`);
+
+        mapState.update(state => {
+            if (!state.handleServiceLineChange) {
+                return { ...state, handleServiceLineChange: true };
+            }
+            return state; // if handleServiceLineChange is already true, return the state as is
+        });
+
+        mapState.update(state => {
+            // Clone state to avoid directly mutating it
+            let newState = {...state};
+
+            // Toggle the "enabled" property of the corresponding service line
+            if (newState.serviceLines[checkboxValue]) {
+                newState.serviceLines[checkboxValue].enabled = !newState.serviceLines[checkboxValue].enabled;
+            }
+            
+            return newState;
+        });
+    }
+
+</script>
+
+<section class="sidebar-section">
+    <form>
+        <input type="checkbox" id="option1" name="checkboxGroup" value="OTP" on:change={toggleHandleServiceLineChange}>
+        <label for="option1">
+            <span class="color-square" style="background-color: {$mapState.serviceLines.OTP.color}"></span>
+            OTP
+        </label><br>
+
+        <input type="checkbox" id="option2" name="checkboxGroup" value="OBOT" on:change={toggleHandleServiceLineChange}>
+        <label for="option2">
+            <span class="color-square" style="background-color: {$mapState.serviceLines.OBOT.color}"></span>
+            OBOT
+        </label><br>
+
+        <input type="checkbox" id="option3" name="checkboxGroup" value="Coleman" on:change={toggleHandleServiceLineChange}>
+        <label for="option3">
+            <span class="color-square" style="background-color: {$mapState.serviceLines.Coleman.color}"></span>
+            Coleman
+        </label><br>
+
+        <input type="checkbox" id="option4" name="checkboxGroup" value="DTX" on:change={toggleHandleServiceLineChange}>
+        <label for="option4">
+            <span class="color-square" style="background-color: {$mapState.serviceLines.DTX.color}"></span>
+            DTX
+        </label><br>
+
+        <input type="checkbox" id="option5" name="checkboxGroup" value="RTC" on:change={toggleHandleServiceLineChange}>
+        <label for="option5">
+            <span class="color-square" style="background-color: {$mapState.serviceLines.RTC.color}"></span>
+            RTC
+        </label><br>
+
+        <input type="checkbox" id="option6" name="checkboxGroup" value="MHP" on:change={toggleHandleServiceLineChange}>
+        <label for="option6">
+            <span class="color-square" style="background-color: {$mapState.serviceLines.MHP.color}"></span>
+            MHP
+        </label><br>
+
+        <input type="checkbox" id="option7" name="checkboxGroup" value="OBOT Competitors" on:change={toggleHandleServiceLineChange}>
+        <label for="option7">
+            <span class="color-square" style="background-color: {$mapState.serviceLines["OBOT Competitors"].color}"></span>
+            OBOT Competitors
+        </label><br>
+
+        <input type="checkbox" id="option8" name="checkboxGroup" value="OTP Competitors" on:change={toggleHandleServiceLineChange}>
+        <label for="option8">
+            <span class="color-square" style="background-color: {$mapState.serviceLines["OTP Competitors"].color}"></span>
+            OTP Competitors
+        </label><br>
+    </form>
+</section>
+
+<style>
+    .sidebar-section {
+        border-bottom: 1px solid black;
+        padding-bottom: 1rem;
+        margin-top: 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+
+    .checkbox-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .color-square {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+    }
+</style>
+Sidebar.svelte
+<script>
+    import { mapState } from "$lib/store.js";
+    import LayerSelect from "./LayerSelect.svelte";
+    import ChoroOptions from "./ChoroOptions.svelte";
+    import CircleTool from "./CircleTool.svelte";
+    import PaintTool from "./PaintTool.svelte";
+    import ServiceLineToggles from "./ServiceLineToggles.svelte";
+    import LayerTable from "./LayerTable.svelte";
+</script>
+
+<div class="sidebar">
+    <LayerSelect />
+
+    <ChoroOptions />
+
+    <CircleTool />
+
+    <PaintTool />
+
+    <ServiceLineToggles />
+
+    <LayerTable />
+</div>
+
+<div id="legend" class="legend"></div>
+
+<style>
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        bottom: 0;
+        left: 0;
+        background-color: white;
+    }
+
+    .legend {
+        background-color: #fff;
+        border-radius: 3px;
+        bottom: 30px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        padding: 10px;
+        position: absolute;
+        right: 10px;
+        z-index: 1;
+    }
+
+    .layer-select {
+        top: 10px;
+        left: 10px;
+        z-index: 1;
+    }
+
+    label {
+        display: block;
+        font-size: 12px;
+        margin-top: .5rem;
+    }
+
+    #start-color-input, #end-color-input {
+        border: none;
+        border-radius: 5px;
+        height: 2rem;
+        cursor: pointer;
+        transition: box-shadow 0.3s ease;
+    }
+
+    #start-color-input:focus, #end-color-input:focus {
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    }
+
+    #color-steps-input {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 0.5rem;
+        width: 3rem;
+    }
+
+    #color-steps-input:focus {
+        border-color: #5c6bc0;
+        outline: none;
+    }
+</style>
+mapboxConfig.js
+export const accessToken = 'pk.eyJ1IjoiZXRoYW56YXdhZHprZSIsImEiOiJjbDdvNDllbHUyODI2M3VvM29ieWkwMWpjIn0.64VWitRTyHE-LheRQ3gCyg';
+
+export const datasetId = 'clhtts6vu32zj2pobovnqn7tk';
+mapUtils.js
+import { mapState } from "$lib/store.js";
+import { accessToken, datasetId } from "./mapboxConfig.js";
+import chroma from "chroma-js";
+import { sources } from "./sources.js";
+import mapboxgl from "mapbox-gl";
+
+let map;
+
+const unsubscribeMap = mapState.subscribe(state => {
+    map = state.map;
+});
+
+export function clearLayers() {
+    if (map) {
+        if (map.getLayer("choro-data-layer")) {
+            map.removeLayer("choro-data-layer");
+        } 
+    }
+}
+
+export function generateColors(numColors) {
+    let startColor, endColor;
+
+    const unsubscribe = mapState.subscribe(state => {
+        startColor = state.choroSettings.startColor;
+        endColor = state.choroSettings.endColor;
+    });
+
+    const colors = chroma.scale([startColor, endColor]).colors(numColors);
+
+    unsubscribe(); // Remember to unsubscribe when done
+
+    return colors;
+}
+
+export function drawLayer(layerTitle) {
+    return new Promise((resolve, reject) => {
+        if (layerTitle !== "None") {
+            let selectedLayerTitle, colorSteps;
+
+            const unsubscribe = mapState.subscribe(state => {
+                selectedLayerTitle = state.choroSettings.selectedLayerTitle;
+                colorSteps = state.choroSettings.colorSteps;
+            });
+
+            const url = `https://api.mapbox.com/datasets/v1/ethanzawadzke/${datasetId}/features?limit=50&access_token=${accessToken}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    let minPop = Infinity;
+                    let maxPop = -Infinity;
+                    for (let feature of data.features) {
+                        let pop = feature.properties[selectedLayerTitle];
+                        minPop = Math.min(minPop, pop);
+                        maxPop = Math.max(maxPop, pop);
+                    }
+                    return [minPop, maxPop];
+                })
+                .then(range => {
+                    let [minPop, maxPop] = range;
+                    let colorStops = [];
+                    let colors = generateColors(colorSteps);
+                    for (let i = 0; i < colors.length; i++) {
+                        let pop = minPop + (maxPop - minPop) * (i / (colors.length - 1));
+                        colorStops.push(pop, colors[i]);
+                    }
+                    return colorStops;
+                })
+                .then(colorStops => {
+                    map.addLayer({
+                        'id': 'choro-data-layer',
+                        'type': 'fill',
+                        'source': 'counties-dataset',
+                        'source-layer': 'counties-dataset',
+                        'paint': {
+                            'fill-color': ['step', ['get', selectedLayerTitle], '#fff', ...colorStops],
+                            'fill-opacity': 0.8
+                        }
+                    }, 'test-layer-outline');
+                    
+                    mapState.subscribe(state => {
+                        let paintExpression = ['match', ['get', 'GEO_ID']];
+                        const paintedCounties = state.toolPaintCountySettings.paintedCounties;
+                        const selectedLayerTitle = state.choroSettings.selectedLayerTitle;
+
+                        /* if (mapState.toolMode != "erase") {
+                            for (const [geoId, color] of Object.entries(paintedCounties)) {
+                                paintExpression.push(geoId, color);
+                            }
+                        } */
+
+                        //if mapState.toolPaintCountySettings.paintedCounties is not empty
+                        if (Object.keys(paintedCounties).length > 0) {
+                            for (const [geoId, color] of Object.entries(paintedCounties)) {
+                                paintExpression.push(geoId, color);
+                            }
+                        } else {
+                            paintExpression.push('000', '#ffffff');
+                        }
+                        
+                        // If no match, fall back to original choropleth color scheme
+                        paintExpression.push(['interpolate', ['linear'], ['get', selectedLayerTitle], ...colorStops]);
+
+                        map.setPaintProperty('choro-data-layer', 'fill-color', paintExpression);
+
+                        // Update legend
+                        let legend = document.getElementById('legend');
+                        legend.innerHTML = `<h4>${layerTitle}</h4>`;
+                        for (let i = 0; i < colorStops.length; i += 2) {
+                            let pop = colorStops[i];
+                            let color = colorStops[i + 1];
+                            legend.innerHTML +=
+                                `<i style="background:${color};width:10px;height:10px;display:inline-block;"></i> ${pop.toFixed(2)}<br>`;
+                        }
+
+                        resolve();
+                    }).unsubscribe(); // unsubscribe right after getting the values
+
+                    resolve();
+                });
+
+
+            console.log(`Drawing layer: ${layerTitle}`);
+
+            unsubscribe(); // We need to unsubscribe from the store when we're done
+        }
+    });
+}   
+
+export function handleServiceLine () {
+    console.log("Handling service line change");
+    const unsubscribe = mapState.subscribe(state => {
+        if (state.handleServiceLineChange) {
+            for (const [serviceLine, settings] of Object.entries(state.serviceLines)) {
+                if (settings.enabled) {
+                    map.addLayer({
+                        'id': `${serviceLine}-data-layer`,
+                        'type': 'circle',
+                        'source': `${serviceLine}`,
+                        'source-layer': settings.sourcelayer,
+                        'paint': {
+                            'circle-color': settings.color,
+                            'circle-opacity': 1
+                        }
+                    }, 'test-layer-outline');
+                } else {
+                    if (map.getLayer(`${serviceLine}-data-layer`)) {
+                        map.removeLayer(`${serviceLine}-data-layer`);
+                    }
+                }
+            }
+        }
+    });
+
+    unsubscribe();
+}
+
+export function createPopup(map, popup, e) {
+    let features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+
+    if (!features.length) {
+        return;
+    }
+
+    let properties = features[0].properties;
+    let description = '';
+    let header = `<h2>${features[0].properties.NAME}</h2>`
+    for (let property in properties) {
+        description += `<strong>${property}:</strong> ${properties[property]}<br>`;
+    }
+
+    // Update the content and position of the existing popup instance
+    popup.setLngLat(e.lngLat)
+        .setHTML(header + description)
+        .addTo(map);
+}
+
+let currentPopup = null;
+
+export const zoomToFeature = (coordinates) => {
+    if (currentPopup) {
+        currentPopup.remove();
+        currentPopup = null;
+    }
+
+    const popup = new mapboxgl.Popup({ offset: 25 });
+
+    // Fly to the new coordinates first
+    map.flyTo({ center: coordinates, zoom: 7 });  // adjust zoom level as needed
+
+    // Wait for the 'moveend' event before creating the popup
+    map.once('moveend', () => {
+        const e = {
+            lngLat: {
+                lng: coordinates[0],
+                lat: coordinates[1]
+            },
+            point: map.project(new mapboxgl.LngLat(coordinates[0], coordinates[1]))
+        };
+        createPopup(map, popup, e);
+        currentPopup = popup;
+    });
+};
+
+
+sources.js
+export const sources = {
+    'OTP': {
+        sourcelayer: 'DTX_list_-_DTX_FINAL-19nx7m',
+        tilesetId: 'ethanzawadzke.ao961pfm',
+    },
+    'OBOT': {
+        sourcelayer: 'Business_Unit_personal_-_Shee-6l8chx',
+        tilesetId: 'ethanzawadzke.de1ir845',
+    },
+    'Coleman': {
+        sourcelayer: 'Business_Unit_personal_-_Shee-6l8chx',
+        tilesetId: 'ethanzawadzke.de1ir845',
+    },
+    'DTX': {
+        sourcelayer: 'Business_Unit_personal_-_Shee-6l8chx',
+        tilesetId: 'ethanzawadzke.de1ir845',
+    },
+    'RTC': {
+        sourcelayer: 'Business_Unit_personal_-_Shee-6l8chx',
+        tilesetId: 'ethanzawadzke.de1ir845',
+    },
+    'MHP': {
+        sourcelayer: 'Business_Unit_personal_-_Shee-6l8chx',
+        tilesetId: 'ethanzawadzke.de1ir845',
+    },
+    'OBOT Competitors': {
+        sourcelayer: 'OBOT_Competiors_-8g2bza',
+        tilesetId: 'ethanzawadzke.a9bcsbgf',
+    },
+    'OTP Competitors': {
+        sourcelayer: 'OBOT_Competitors_-_OTP_Compet-0l1w5r',
+        tilesetId: 'ethanzawadzke.60r3z6aa',
+    },
+}

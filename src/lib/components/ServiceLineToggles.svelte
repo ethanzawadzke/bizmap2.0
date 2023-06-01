@@ -15,10 +15,8 @@
         });
 
         mapState.update(state => {
-            // Clone state to avoid directly mutating it
             let newState = {...state};
 
-            // Toggle the "enabled" property of the corresponding service line
             if (newState.serviceLines[checkboxValue]) {
                 newState.serviceLines[checkboxValue].enabled = !newState.serviceLines[checkboxValue].enabled;
             }
@@ -27,59 +25,31 @@
         });
     }
 
+    let serviceLinesData = [];
+
+    // Subscribe to the store to get the latest data
+    mapState.subscribe(($mapState) => {
+        serviceLinesData = Object.entries($mapState.serviceLines).map(([key, value]) => ({
+            id: key,
+            enabled: value.enabled,
+            color: value.color
+        }));
+    });
+
 </script>
 
 <section class="sidebar-section">
     <form>
-        <input type="checkbox" id="option1" name="checkboxGroup" value="OTP" on:change={toggleHandleServiceLineChange}>
-        <label for="option1">
-            <span class="color-square" style="background-color: {$mapState.serviceLines.OTP.color}"></span>
-            OTP
-        </label><br>
-
-        <input type="checkbox" id="option2" name="checkboxGroup" value="OBOT" on:change={toggleHandleServiceLineChange}>
-        <label for="option2">
-            <span class="color-square" style="background-color: {$mapState.serviceLines.OBOT.color}"></span>
-            OBOT
-        </label><br>
-
-        <input type="checkbox" id="option3" name="checkboxGroup" value="Coleman" on:change={toggleHandleServiceLineChange}>
-        <label for="option3">
-            <span class="color-square" style="background-color: {$mapState.serviceLines.Coleman.color}"></span>
-            Coleman
-        </label><br>
-
-        <input type="checkbox" id="option4" name="checkboxGroup" value="DTX" on:change={toggleHandleServiceLineChange}>
-        <label for="option4">
-            <span class="color-square" style="background-color: {$mapState.serviceLines.DTX.color}"></span>
-            DTX
-        </label><br>
-
-        <input type="checkbox" id="option5" name="checkboxGroup" value="RTC" on:change={toggleHandleServiceLineChange}>
-        <label for="option5">
-            <span class="color-square" style="background-color: {$mapState.serviceLines.RTC.color}"></span>
-            RTC
-        </label><br>
-
-        <input type="checkbox" id="option6" name="checkboxGroup" value="MHP" on:change={toggleHandleServiceLineChange}>
-        <label for="option6">
-            <span class="color-square" style="background-color: {$mapState.serviceLines.MHP.color}"></span>
-            MHP
-        </label><br>
-
-        <input type="checkbox" id="option7" name="checkboxGroup" value="OBOT Competitors" on:change={toggleHandleServiceLineChange}>
-        <label for="option7">
-            <span class="color-square" style="background-color: {$mapState.serviceLines["OBOT Competitors"].color}"></span>
-            OBOT Competitors
-        </label><br>
-
-        <input type="checkbox" id="option8" name="checkboxGroup" value="OTP Competitors" on:change={toggleHandleServiceLineChange}>
-        <label for="option8">
-            <span class="color-square" style="background-color: {$mapState.serviceLines["OTP Competitors"].color}"></span>
-            OTP Competitors
-        </label><br>
+        {#each serviceLinesData as serviceLine}
+            <input type="checkbox" bind:checked={serviceLine.enabled} id={serviceLine.id} name="checkboxGroup" value={serviceLine.id} on:change={toggleHandleServiceLineChange}>
+            <label for={serviceLine.id}>
+                <span class="color-square" style="background-color: {serviceLine.color}"></span>
+                {serviceLine.id}
+            </label><br>
+        {/each}
     </form>
 </section>
+
 
 <style>
     .sidebar-section {

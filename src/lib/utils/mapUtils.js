@@ -77,7 +77,7 @@ export function drawLayer(layerTitle) {
                             'fill-color': ['step', ['get', selectedLayerTitle], '#fff', ...colorStops],
                             'fill-opacity': 0.8
                         }
-                    }, 'test-layer-outline');
+                    }, 'road-street');
                     
                     mapState.subscribe(state => {
                         let paintExpression = ['match', ['get', 'GEO_ID']];
@@ -100,7 +100,7 @@ export function drawLayer(layerTitle) {
                         }
                         
                         // If no match, fall back to original choropleth color scheme
-                        paintExpression.push(['interpolate', ['linear'], ['get', selectedLayerTitle], ...colorStops]);
+                        paintExpression.push(['step', ['get', selectedLayerTitle], '#fff', ...colorStops]);
 
                         map.setPaintProperty('choro-data-layer', 'fill-color', paintExpression);
 
@@ -128,33 +128,242 @@ export function drawLayer(layerTitle) {
     });
 }   
 
-export function handleServiceLine () {
+export function handleServiceLine() {
     console.log("Handling service line change");
     const unsubscribe = mapState.subscribe(state => {
         if (state.handleServiceLineChange) {
             for (const [serviceLine, settings] of Object.entries(state.serviceLines)) {
                 if (settings.enabled) {
-                    map.addLayer({
-                        'id': `${serviceLine}-data-layer`,
-                        'type': 'circle',
-                        'source': `${serviceLine}`,
-                        'source-layer': settings.sourcelayer,
-                        'paint': {
-                            'circle-color': settings.color,
-                            'circle-opacity': 1
+                    if (map.getLayer(`${serviceLine}-data-layer`)) {
+                        map.removeLayer(`${serviceLine}-data-layer`);
+                    }
+                    if (settings.keyword === "heatmap") {
+                        map.addLayer(
+                            {
+                                'id': 'test',
+                                'type': 'heatmap',
+                                'source': 'SUD RTCs and Outpatient Heatmap',
+                                'maxzoom': 9,
+                                'paint': {
+                                    // Increase the heatmap weight based on frequency and property magnitude
+                                    'heatmap-weight': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ["+", ['get', 'BEDS'], ['get', 'SLOTS']],
+                                        0,
+                                        0,
+                                        550, // Change to your maximum sum of beds and slots
+                                        1
+                                    ],
+                                    // Increase the heatmap color weight weight by zoom level
+                                    // heatmap-intensity is a multiplier on top of heatmap-weight
+                                    'heatmap-intensity': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ['zoom'],
+                                        0,
+                                        1,
+                                        9,
+                                        3
+                                    ],
+                                    // Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
+                                    // Begin color ramp at 0-stop with a 0-transparancy color
+                                    // to create a blur-like effect.
+                                    'heatmap-color': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ['heatmap-density'],
+                                        0,
+                                        'rgba(33,102,172,0)',
+                                        0.2,
+                                        'rgb(103,169,207)',
+                                        0.4,
+                                        'rgb(209,229,240)',
+                                        0.6,
+                                        'rgb(253,219,199)',
+                                        0.8,
+                                        'rgb(239,138,98)',
+                                        1,
+                                        'rgb(178,24,43)'
+                                    ],
+                                    // Adjust the heatmap radius by zoom level
+                                    'heatmap-radius': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ['zoom'],
+                                        0,
+                                        10,
+                                        9,
+                                        20
+                                    ],
+                                    // Transition from heatmap to circle layer by zoom level
+                                    'heatmap-opacity': [
+                                        'interpolate',
+                                        ['linear'],
+                                        ['zoom'],
+                                        7,
+                                        1,
+                                        9,
+                                        3
+                                    ]
+                                }
+                            },
+                            'waterway-label'
+                        );
+                    }
+
+
+                    if (settings.keyword === 'sud/outpatient') {
+                        map.addLayer({
+                            'id': `${serviceLine}-data-layer`,
+                            'type': 'circle',
+                            'source': `${serviceLine}`,
+                            'source-layer': settings.sourcelayer,
+                            'paint': {
+                                'circle-color': settings.color,
+                                'circle-opacity': 1,
+                                'circle-stroke-width': 1,
+                                'circle-stroke-color': '#fff',
+                                'circle-radius': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ["+", ['get', 'BEDS'], ['get', 'SLOTS']],
+                                    0, 2, // Minimum number of beds+slots corresponds to a minimum radius
+                                    200, 40 // Maximum number of beds+slots corresponds to a maximum radius
+                                ]
+                            }
+                        }, 'test-layer-outline');
+                    } else {
+                        map.addLayer({
+                            'id': `${serviceLine}-data-layer`,
+                            'type': 'circle',
+                            'source': `${serviceLine}`,
+                            'source-layer': settings.sourcelayer,
+                            'paint': {
+                                'circle-color': settings.color,
+                                'circle-opacity': 1,
+                                'circle-stroke-width': 1,
+                                'circle-stroke-color': '#fff',
+                                'circle-radius': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ['get', 'BEDS'],
+                                    0, 2, // Minimum number of beds corresponds to a minimum radius
+                                    300, 40 // Maximum number of beds corresponds to a maximum radius
+                                ]
+                            }
+                        }, 'test-layer-outline'); 
+                    }
+                    
+
+                    if (settings.cluster) {
+                        map.addLayer({
+                            'id': `${serviceLine}-cluster`,
+                            'type': 'circle',
+                            'source': `${serviceLine}`,
+                            'filter': ['has', 'point_count'],
+                            'paint': {
+                                'circle-color': [
+                                    'step', 
+                                    ['get', 'point_count'], 
+                                    `${settings.color}`, 
+                                    50, 
+                                    `${settings.color}`, 
+                                    100, 
+                                    `${settings.color}`
+                                ],
+                                'circle-opacity': 1,
+                                'circle-radius': [
+                                    'step', 
+                                    ['get', 'point_count'], 
+                                    10,
+                                    12.5,
+                                    20, 
+                                    25,
+                                    40, 
+                                    50, 
+                                    60, 
+                                    100, 
+                                    80
+                                ]
+                            }
+                        });
+
+                        if (settings.keyword === 'sud/outpatient') {
+                            map.addLayer({
+                                'id': `${serviceLine}-beds-layer`,
+                                'type': 'symbol',
+                                'source': `${serviceLine}`,
+                                'source-layer': settings.sourcelayer,
+                                'layout': {
+                                    'text-field': ['concat', ['get', 'BEDS'], ' Beds\n', ['get', 'SLOTS'], ' Slots'],
+                                    'text-size': 12,
+                                    'symbol-placement': 'point',
+                                },
+                                'paint': {
+                                    'text-color': '#000'
+                                }
+                            }, null);
+                        } else {
+                            map.addLayer({
+                                'id': `${serviceLine}-beds-layer`,
+                                'type': 'symbol',
+                                'source': `${serviceLine}`,
+                                'source-layer': settings.sourcelayer,
+                                'layout': {
+                                    'text-field': ['concat', ['get', 'BEDS'], '\nbeds'],
+                                    'text-size': 12,
+                                    'symbol-placement': 'point',
+                                },
+                                'paint': {
+                                    'text-color': '#000'
+                                }
+                            }, null);
                         }
-                    }, 'test-layer-outline');
+
+                        
+
+                        map.addLayer({
+                            id: `${serviceLine}-cluster-count`,
+                            type: 'symbol',
+                            source: `${serviceLine}`,
+                            filter: ['has', 'point_count'],
+                            layout: {
+                                'text-field': ['concat', ['get', 'point_count_abbreviated'], `\n${settings.keyword}`],
+                                'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                                'text-size': 12,
+                                'symbol-placement': 'point',
+                            }
+                        }, null);
+                    }
+                    
                 } else {
                     if (map.getLayer(`${serviceLine}-data-layer`)) {
                         map.removeLayer(`${serviceLine}-data-layer`);
                     }
+                    if (map.getLayer(`${serviceLine}-cluster`)) {
+                        map.removeLayer(`${serviceLine}-cluster`);
+                    }
+                    //remove cluster count
+                    if (map.getLayer(`${serviceLine}-cluster-count`)) {
+                        map.removeLayer(`${serviceLine}-cluster-count`);
+                    }
+                    if (map.getLayer(`${serviceLine}-beds-layer`)) {
+                        map.removeLayer(`${serviceLine}-beds-layer`);
+                    }
+                    //remove heatmap if not enabed
+                    if (map.getLayer('test')) {
+                        map.removeLayer('test');
+                    }
+
                 }
             }
         }
     });
-
     unsubscribe();
 }
+
+
 
 export function createPopup(map, popup, e) {
     let features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
@@ -202,4 +411,8 @@ export const zoomToFeature = (coordinates) => {
         currentPopup = popup;
     });
 };
+
+export const convertMilesToMeters = (miles) => {
+    return miles * 1609.34;
+}
 

@@ -5,7 +5,7 @@
     import CircleTool from "./CircleTool.svelte";
     import PaintTool from "./PaintTool.svelte";
     import ServiceLineToggles from "./ServiceLineToggles.svelte";
-    import LayerTable from "./LayerTable.svelte";
+    import LayerTable from "./LayerTableOld.svelte";
 </script>
 
 <div class="sidebar">
