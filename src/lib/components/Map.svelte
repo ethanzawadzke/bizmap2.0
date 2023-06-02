@@ -62,11 +62,16 @@
                 'cluster': true, // Enable clustering
                 'clusterMaxZoom': 8,
                 'clusterRadius': 50
-            })
+            });
 
             map.addSource('SUD RTCs and Outpatient Heatmap', {
                 type: 'geojson',
                 data: 'https://raw.githubusercontent.com/ethanzawadzke/supreme-octo-engine/main/Texas%20Data%20Sets%20for%20MAP%20%20-%20Copy%20of%20SUD%20RTC%20and%20Outpatient.geojson',
+            });
+
+            map.addSource('Prospective Real Estate (Select last)', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/ethanzawadzke/supreme-octo-engine/main/Texas%20Data%20Sets%20for%20MAP%20%20-%20Sheet5.geojson'
             });
 
             map.addLayer({

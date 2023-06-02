@@ -137,6 +137,7 @@ export function handleServiceLine() {
                     if (map.getLayer(`${serviceLine}-data-layer`)) {
                         map.removeLayer(`${serviceLine}-data-layer`);
                     }
+                    
                     if (settings.keyword === "heatmap") {
                         map.addLayer(
                             {
@@ -233,6 +234,19 @@ export function handleServiceLine() {
                                 ]
                             }
                         }, 'test-layer-outline');
+                    } else if (settings.keyword === "realestate") {
+                        map.addLayer({
+                            'id': `${serviceLine}-data-layer`,
+                            'type': 'circle',
+                            'source': `${serviceLine}`,
+                            'paint': {
+                                'circle-color': settings.color,
+                                'circle-opacity': 1,
+                                'circle-stroke-width': 1,
+                                'circle-stroke-color': '#fff',
+                                'circle-radius': 10
+                            }
+                        }, null); 
                     } else {
                         map.addLayer({
                             'id': `${serviceLine}-data-layer`,

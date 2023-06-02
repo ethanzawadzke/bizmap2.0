@@ -80,6 +80,11 @@ export const mapState = writable({
             sourcelayer: 'OBOT_Competitors_-_OTP_Compet-0l1w5r',
             tilesetId: 'ethanzawadzke.60r3z6aa',
         },
+        "Prospective Real Estate (Select last)": {
+            keyword: 'realestate',
+            enabled: false,
+            color: '#C70039'
+        },
         "Psychiatric Hospitals": {
             keyword: 'psych',
             cluster: true,
