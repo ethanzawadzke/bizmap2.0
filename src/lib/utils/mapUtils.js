@@ -134,8 +134,11 @@ export function handleServiceLine() {
         if (state.handleServiceLineChange) {
             for (const [serviceLine, settings] of Object.entries(state.serviceLines)) {
                 if (settings.enabled) {
+                    
                     if (map.getLayer(`${serviceLine}-data-layer`)) {
                         map.removeLayer(`${serviceLine}-data-layer`);
+                        map.removeLayer(`${serviceLine}-beds-data-layer`);
+                        map.removeLayer(`${serviceLine}-slots-data-layer`);
                     }
                     
                     if (settings.keyword === "heatmap") {
@@ -213,24 +216,44 @@ export function handleServiceLine() {
                         );
                     }
 
-
                     if (settings.keyword === 'sud/outpatient') {
+                        // Slots layer
                         map.addLayer({
-                            'id': `${serviceLine}-data-layer`,
+                            'id': `${serviceLine}-slots-data-layer`,
                             'type': 'circle',
                             'source': `${serviceLine}`,
                             'source-layer': settings.sourcelayer,
                             'paint': {
-                                'circle-color': settings.color,
-                                'circle-opacity': 1,
+                                'circle-color': 'yellow',
+                                'circle-opacity': 0.5, // Reduced opacity to visualize overlapping
                                 'circle-stroke-width': 1,
-                                'circle-stroke-color': '#fff',
+                                'circle-stroke-color': 'yellow',
                                 'circle-radius': [
                                     'interpolate',
                                     ['linear'],
-                                    ["+", ['get', 'BEDS'], ['get', 'SLOTS']],
-                                    0, 2, // Minimum number of beds+slots corresponds to a minimum radius
-                                    500, 50 // Maximum number of beds+slots corresponds to a maximum radius
+                                    ['get', 'SLOTS'],
+                                    0, 2, // Minimum number of slots corresponds to a minimum radius
+                                    500, 50 // Maximum number of slots corresponds to a maximum radius
+                                ]
+                            }
+                        }, 'test-layer-outline');
+
+                        map.addLayer({
+                            'id': `${serviceLine}-beds-data-layer`,
+                            'type': 'circle',
+                            'source': `${serviceLine}`,
+                            'source-layer': settings.sourcelayer,
+                            'paint': {
+                                'circle-color': 'black',
+                                'circle-opacity': 0.5, // Reduced opacity to visualize overlapping
+                                'circle-stroke-width': 1,
+                                'circle-stroke-color': 'black',
+                                'circle-radius': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ['get', 'BEDS'],
+                                    0, 2, // Minimum number of beds corresponds to a minimum radius
+                                    500, 50 // Maximum number of beds corresponds to a maximum radius
                                 ]
                             }
                         }, 'test-layer-outline');
@@ -255,7 +278,7 @@ export function handleServiceLine() {
                             'source-layer': settings.sourcelayer,
                             'paint': {
                                 'circle-color': settings.color,
-                                'circle-opacity': 1,
+                                'circle-opacity': .75,
                                 'circle-stroke-width': 1,
                                 'circle-stroke-color': '#fff',
                                 'circle-radius': [
@@ -335,8 +358,6 @@ export function handleServiceLine() {
                             }, null);
                         }
 
-                        
-
                         map.addLayer({
                             id: `${serviceLine}-cluster-count`,
                             type: 'symbol',
@@ -364,6 +385,12 @@ export function handleServiceLine() {
                     }
                     if (map.getLayer(`${serviceLine}-beds-layer`)) {
                         map.removeLayer(`${serviceLine}-beds-layer`);
+                    }
+                    if (map.getLayer(`${serviceLine}-slots-data-layer`)) {
+                        map.removeLayer(`${serviceLine}-slots-data-layer`);
+                    }
+                    if (map.getLayer(`${serviceLine}-beds-data-layer`)) {
+                        map.removeLayer(`${serviceLine}-beds-data-layer`);
                     }
                     //remove heatmap if not enabed
                     if (map.getLayer('test')) {

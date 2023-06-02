@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 
 export const mapState = writable({
     map: null,
+    contextMenuOpen: false,
     handleLayerChange: false,
     handleCountyChange: false,
     handleServiceLineChange: false,
@@ -97,7 +98,7 @@ export const mapState = writable({
             keyword: 'general',
             cluster: true,
             enabled: false,
-            color: '#DCD60A',
+            color: 'blue',
             sourcelayer: '',
             tilesetId: ''
         },
@@ -105,7 +106,7 @@ export const mapState = writable({
             keyword: 'sud/outpatient',
             cluster: true,
             enabled: false,
-            color: '#BD15AB',
+            color: 'yellow',
             sourcelayer: '',
             tilesetId: ''
         },

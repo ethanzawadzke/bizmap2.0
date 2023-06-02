@@ -96,7 +96,9 @@
         });
 
         map.on('click', function(e) {
-            if ($mapState.toolMode === "Circle") {
+            if ($mapState.toolMode === "Circle" && !$mapState.contextMenuOpen) {
+                console.log('Drawing new circle...')
+                console.log('contextMenuOpen:', $mapState.contextMenuOpen)
                 const circle = new MapboxCircle(e.lngLat, convertMilesToMeters($mapState.toolCircleSettings.radius), {
                         editable: true,
                         fillColor: $mapState.toolCircleSettings.color
@@ -117,6 +119,13 @@
 
                     circleObject.circle.on('contextmenu', function(e) {
                         e.preventDefault();
+                        console.log('Opening context menu...')
+                        mapState.update(state => {
+                            state.contextMenuOpen = true;
+                            return state;
+                        });
+                        console.log('Context menu open:', $mapState.contextMenuOpen);
+
 
                         const deleteButton = document.createElement('button');
                         deleteButton.textContent = 'Delete';
@@ -145,8 +154,24 @@
                                 delete state.toolCircleSettings.circles[circleObject.id];
                                 return state;
                             });
+
+                            console.log('Removing popup...')
                             popup.remove(); // Close the popup when we delete the circle
+                            mapState.update(state => {
+                                state.contextMenuOpen = false;
+                                return state;
+                            });
+                            console.log('Context menu status:', $mapState.contextMenuOpen);
                         };
+
+                        popup.on('close', function() {
+                            console.log('Closing popup...')
+                            mapState.update(state => {
+                                state.contextMenuOpen = false;
+                                return state;
+                            });// Also close the context menu when it is closed without clicking the delete button
+                            console.log('Context menu status:', $mapState.contextMenuOpen);
+                        });
 
                         popup.setLngLat(e.lngLat)
                             .setDOMContent(deleteButton)
