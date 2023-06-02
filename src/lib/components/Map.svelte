@@ -148,8 +148,51 @@
                     });
                 }
             }   else {
-                // Create popup on click
-                createPopup(map, popup, e);
+                let choroFeatures = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+                let psychFeatures = map.queryRenderedFeatures(e.point, { layers: ['Psychiatric Hospitals-data-layer'] });
+                let genFeatures = map.queryRenderedFeatures(e.point, { layers: ['General Hospitals-data-layer'] });
+                let sudFeatures = map.queryRenderedFeatures(e.point, { layers: ['SUD RTCs and Outpatient-data-layer'] });
+                let realFeatures = map.queryRenderedFeatures(e.point, { layers: ['Prospective Real Estate (Select last)-data-layer'] });
+
+                if (!choroFeatures.length && !psychFeatures.length && !genFeatures.length && !sudFeatures.length && !realFeatures.length) {
+                    return;
+                }
+
+                let properties;
+                let header;
+                if (choroFeatures.length > 0) {
+                    properties = choroFeatures[0].properties;
+                } else if (psychFeatures.length > 0) {
+                    properties = psychFeatures[0].properties;
+                } else if (genFeatures.length > 0) {
+                    properties = genFeatures[0].properties;
+                } else if (sudFeatures.length > 0) {
+                    properties = sudFeatures[0].properties;
+                } else {
+                    properties = realFeatures[0].properties;
+                }
+
+                if (properties['DBA NAME']) {
+                    header = `<h2>${properties['DBA NAME']}</h2>`;
+                } else if (properties.NAME) {
+                    header = `<h2>${properties.NAME}</h2>`;
+                } else if (properties['LEGAL NAME']) {
+                    header = `<h2>${properties['LEGAL NAME']}</h2>`;
+                } else if (properties['API ADDRESS']) {
+                    header = `<h2>${properties['API ADDRESS']}</h2>`;
+                } else {
+                    header = "<h2>Unknown</h2>";
+                }
+
+                let description = '';
+                for (let property in properties) {
+                    description += `<strong>${property}:</strong> ${properties[property]}<br>`;
+                }
+
+                // Update the content and position of the existing popup instance
+                popup.setLngLat(e.lngLat)
+                    .setHTML(header + description)
+                    .addTo(map);
             }
         });
 

@@ -380,15 +380,21 @@ export function handleServiceLine() {
 
 
 export function createPopup(map, popup, e) {
-    let features = map.queryRenderedFeatures(e.point, { layers: ['choro-data-layer'] });
+    //log top layer
+    console.log(map.queryRenderedFeatures(e.point));
+
+
+    let layers = ['choro-data-layer', 'Psychiatric Hospitals', 'General Hospitals', 'SUD RTCs and Outpatient'];
+    let features = map.queryRenderedFeatures(e.point, { layers: layers });
 
     if (!features.length) {
         return;
     }
 
-    let properties = features[0].properties;
+    let feature = features[0]; // the topmost feature
+    let properties = feature.properties;
     let description = '';
-    let header = `<h2>${features[0].properties.NAME}</h2>`
+    let header = `<h2>${feature.properties.NAME}</h2>`; // Adjust this line to reflect the properties of your circle layer
     for (let property in properties) {
         description += `<strong>${property}:</strong> ${properties[property]}<br>`;
     }
