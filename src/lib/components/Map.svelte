@@ -216,9 +216,11 @@
                 let psychFeatures = map.queryRenderedFeatures(e.point, { layers: ['Psychiatric Hospitals-data-layer'] });
                 let genFeatures = map.queryRenderedFeatures(e.point, { layers: ['General Hospitals-data-layer'] });
                 let sudFeatures = map.queryRenderedFeatures(e.point, { layers: ['SUD RTCs and Outpatient-data-layer'] });
+                let sudSlotFeatures = map.queryRenderedFeatures(e.point, { layers: ['SUD RTCs and Outpatient-slots-data-layer'] });
+                let sudBedFeatures = map.queryRenderedFeatures(e.point, { layers: ['SUD RTCs and Outpatient-beds-data-layer'] });
                 let realFeatures = map.queryRenderedFeatures(e.point, { layers: ['Prospective Real Estate (Select last)-data-layer'] });
 
-                if (!choroFeatures.length && !psychFeatures.length && !genFeatures.length && !sudFeatures.length && !realFeatures.length) {
+                if (!choroFeatures.length && !psychFeatures.length && !genFeatures.length && !sudFeatures.length && !realFeatures.length && !sudSlotFeatures.length && !sudBedFeatures.length) {
                     return;
                 }
 
@@ -232,6 +234,10 @@
                     properties = genFeatures[0].properties;
                 } else if (sudFeatures.length > 0) {
                     properties = sudFeatures[0].properties;
+                } else if (sudSlotFeatures.length > 0) {
+                    properties = sudSlotFeatures[0].properties;
+                } else if (sudBedFeatures.length > 0) {
+                    properties = sudBedFeatures[0].properties;
                 } else {
                     properties = realFeatures[0].properties;
                 }
