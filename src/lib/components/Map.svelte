@@ -29,6 +29,7 @@
         
         const map = new mapboxgl.Map({
             container: mapContainer, 
+            projection: 'mercator',
             style: 'mapbox://styles/mapbox/streets-v12', 
             center: [-73.99283,40.750813], 
             zoom: 5
@@ -106,12 +107,50 @@
                         circle: circle
                     };
 
+                    const popup = new mapboxgl.Popup({ 
+                        className: 'no-padding no-arrow', 
+                        closeOnClick: true, 
+                        closeButton: false,
+                        anchor: 'bottom-left', 
+                        offset: [0, 0]  
+                    });
+
                     circleObject.circle.on('contextmenu', function(e) {
-                        circleObject.circle.remove();
-                        mapState.update(state => {
-                            delete state.toolCircleSettings.circles[circleObject.id];
-                            return state;
-                        });
+                        e.preventDefault();
+
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.style.cssText = `
+                            display: block;
+                            background-color: white;
+                            color: black;
+                            padding: 5px 10px;
+                            border: none;
+                            text-align: left;
+                            cursor: pointer;
+                            width: 100%;
+                            box-sizing: border-box;
+                        `;
+                        deleteButton.onmouseover = function() {
+                            this.style.backgroundColor = '#0078D7';
+                            this.style.color = 'white';
+                        };
+                        deleteButton.onmouseout = function() {
+                            this.style.backgroundColor = 'white';
+                            this.style.color = 'black';
+                        };
+                        deleteButton.onclick = function() {
+                            circleObject.circle.remove();
+                            mapState.update(state => {
+                                delete state.toolCircleSettings.circles[circleObject.id];
+                                return state;
+                            });
+                            popup.remove(); // Close the popup when we delete the circle
+                        };
+
+                        popup.setLngLat(e.lngLat)
+                            .setDOMContent(deleteButton)
+                            .addTo(map);
                     });
 
                     circle.once('radiuschanged', function (circleObj) {
