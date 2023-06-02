@@ -92,7 +92,7 @@ export const mapState = writable({
             keyword: 'general',
             cluster: true,
             enabled: false,
-            color: '#ff0000',
+            color: '#DCD60A',
             sourcelayer: '',
             tilesetId: ''
         },

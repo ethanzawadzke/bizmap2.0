@@ -6,6 +6,7 @@
     import { accessToken, datasetId } from "$lib/utils/mapboxConfig.js";
     import { clearLayers, drawLayer, handleServiceLine, createPopup, convertMilesToMeters } from "$lib/utils/mapUtils.js";
     import { sources } from "$lib/utils/sources.js";
+    import { append } from "svelte/internal";
 
     let map;
     let mapContainer;
@@ -54,6 +55,14 @@
                 'clusterMaxZoom': 8,
                 'clusterRadius': 50 // Radius of each cluster when clustering points (defaults to 50)
             });
+
+            map.addSource('General Hospitals', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/ethanzawadzke/supreme-octo-engine/main/Texas%20Data%20Sets%20for%20MAP%20%20-%20Copy%20of%20General%20Hospitals%20%20(2).geojson',
+                'cluster': true, // Enable clustering
+                'clusterMaxZoom': 8,
+                'clusterRadius': 50
+            })
 
             map.addSource('SUD RTCs and Outpatient Heatmap', {
                 type: 'geojson',

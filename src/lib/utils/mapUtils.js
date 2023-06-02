@@ -229,7 +229,7 @@ export function handleServiceLine() {
                                     ['linear'],
                                     ["+", ['get', 'BEDS'], ['get', 'SLOTS']],
                                     0, 2, // Minimum number of beds+slots corresponds to a minimum radius
-                                    200, 40 // Maximum number of beds+slots corresponds to a maximum radius
+                                    500, 50 // Maximum number of beds+slots corresponds to a maximum radius
                                 ]
                             }
                         }, 'test-layer-outline');
@@ -249,7 +249,7 @@ export function handleServiceLine() {
                                     ['linear'],
                                     ['get', 'BEDS'],
                                     0, 2, // Minimum number of beds corresponds to a minimum radius
-                                    300, 40 // Maximum number of beds corresponds to a maximum radius
+                                    300, 30 // Maximum number of beds corresponds to a maximum radius
                                 ]
                             }
                         }, 'test-layer-outline'); 
